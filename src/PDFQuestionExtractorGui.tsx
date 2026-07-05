@@ -38,7 +38,7 @@ type PDFQuestionExtractorGuiProps = {
   selectedSubject?: any;
 };
 
-const DEFAULT_API_BASE_URL = "/api";
+const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 export default function PDFQuestionExtractorGui({
   apiBaseUrl = DEFAULT_API_BASE_URL,
