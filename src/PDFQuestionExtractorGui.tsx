@@ -505,31 +505,13 @@ export default function PDFQuestionExtractorGui({
                 <span><strong>Diagrams:</strong> {result.paper.total_diagrams}</span>
               </div>
             </div>
-            
-            <button 
-              onClick={handleGenerateAll}
-              disabled={isGeneratingAll}
-              style={{
-                padding: "12px 24px",
-                backgroundColor: isGeneratingAll ? "#ccc" : "#10b981",
-                color: "#fff",
-                border: "none",
-                borderRadius: "6px",
-                cursor: isGeneratingAll ? "not-allowed" : "pointer",
-                fontWeight: 600,
-                fontSize: "15px",
-                transition: "all 0.2s"
-              }}
-            >
-              {isGeneratingAll ? "Processing Missing..." : "Process Missing Answers"}
-            </button>
           </div>
           
-          {allQuestionsSuccess && !isSavingBatch && (
+          {!isSavingBatch && (
             <div style={{ padding: "16px", backgroundColor: "#ecfdf5", borderRadius: "6px", marginBottom: "24px", border: "1px solid #10b981", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <h3 style={{ margin: "0 0 4px 0", color: "#065f46" }}>All Answers Generated!</h3>
-                <p style={{ margin: 0, color: "#047857", fontSize: "14px" }}>Ready to safely upload the complete paper to the database.</p>
+                <h3 style={{ margin: "0 0 4px 0", color: "#065f46" }}>Extraction Complete!</h3>
+                <p style={{ margin: 0, color: "#047857", fontSize: "14px" }}>Ready to upload the question paper and questions to the database.</p>
               </div>
               <button 
                 onClick={handleSaveEntirePaper}
