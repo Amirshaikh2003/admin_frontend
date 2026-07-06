@@ -275,7 +275,7 @@ export default function PDFQuestionExtractorGui({
     
     setIsGeneratingAll(true);
     
-    const CONCURRENCY_LIMIT = 4;
+    const CONCURRENCY_LIMIT = 1;
     const questionsToProcess = result.questions.filter(q => answers[`${q.question_key}`]?.status !== "success");
     
     for (let i = 0; i < questionsToProcess.length; i += CONCURRENCY_LIMIT) {
@@ -314,7 +314,7 @@ export default function PDFQuestionExtractorGui({
           image_urls: q.image_urls,
           answer: ansData?.fullAnswer || null,
           analysis: ansData?.analysis || null,
-          skip_answer: Boolean(!ansData?.fullAnswer && q.image_urls && q.image_urls.length > 0)
+          skip_answer: Boolean(!ansData?.fullAnswer)
         };
       });
       
