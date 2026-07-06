@@ -210,38 +210,27 @@ export default function PDFQuestionExtractorGui({
     setEditForm({ ...newQuestion });
   };
 
-  const ensurePaperId = async () => {
-    if (paperId) return paperId;
-
-    const effectiveSubjectId = selectedSubject?.subject_id || manualSubjectId.trim();
-    if (!effectiveSubjectId) {
-      alert("Please select a subject from the Academic Import tab or enter a Subject ID before processing questions!");
-      return null;
-    }
-
-    let uploadedPaperUrl = pdfPreviewUrl || undefined;
-    if (file && !pdfPreviewUrl) {
-      try {
-        const formData = new FormData();
-        formData.append("file", file);
-        const uploadRes = await fetch(`${cleanApiBaseUrl}/upload-paper-pdf`, {
-          method: "POST",
-          body: formData,
-        });
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          if (uploadData.success && uploadData.paper_url) {
-            uploadedPaperUrl = uploadData.paper_url;
-          }
-        } else {
-          console.error("Upload failed", await uploadRes.text());
+  const uploadPdfToCloudinary = async () => {
+    if (!file) return null;
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const uploadRes = await fetch(`${cleanApiBaseUrl}/upload-paper-pdf`, {
+        method: "POST",
+        body: formData,
+      });
+      if (uploadRes.ok) {
+        const uploadData = await uploadRes.json();
+        if (uploadData.success && uploadData.paper_url) {
+          return uploadData.paper_url;
         }
-      } catch (err) {
-        console.error("Failed to upload PDF to Cloudinary", err);
+      } else {
+        console.error("Upload failed", await uploadRes.text());
       }
+    } catch (err) {
+      console.error("Failed to upload PDF to Cloudinary", err);
     }
-
-    return uploadedPaperUrl;
+    return null;
   };
 
   const processSingleQuestion = async (q: ExtractedQuestion) => {
@@ -350,7 +339,7 @@ export default function PDFQuestionExtractorGui({
     setIsSavingBatch(true);
     
     try {
-      const paperUrl = await ensurePaperId();
+      const paperUrl = await uploadPdfToCloudinary();
       
       const batchQuestions = result.questions.map(q => {
         const key = `${q.question_key}`;
