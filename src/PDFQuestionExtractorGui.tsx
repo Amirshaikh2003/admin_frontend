@@ -97,13 +97,13 @@ export default function PDFQuestionExtractorGui({
   useEffect(() => {
     setManualSubjectId("");
     setSubjects([]);
-    if (selSem) {
-      fetch(`${cleanApiBaseUrl}/academic/subjects?semester_id=${selSem}`)
+    if (selSem && selBranch) {
+      fetch(`${cleanApiBaseUrl}/academic/subjects?branch_id=${selBranch}&semester_id=${selSem}`)
         .then(res => res.json())
         .then(data => { if(data.success) setSubjects(data.subjects); })
         .catch(console.error);
     }
-  }, [selSem, cleanApiBaseUrl]);
+  }, [selSem, selBranch, cleanApiBaseUrl]);
   const [paperTitle, setPaperTitle] = useState("");
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<ExtractedQuestion>>({});
@@ -420,13 +420,13 @@ export default function PDFQuestionExtractorGui({
               <div style={{ flex: 1, minWidth: "140px" }}>
                 <select value={selUni} onChange={e => setSelUni(e.target.value)} style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1", backgroundColor: "#fff" }}>
                   <option value="">Select University</option>
-                  {universities.map(u => <option key={u.university_id} value={u.university_id}>{u.name}</option>)}
+                  {universities.map(u => <option key={u.university_id} value={u.university_id}>{u.university_name}</option>)}
                 </select>
               </div>
               <div style={{ flex: 1, minWidth: "140px" }}>
                 <select value={selBranch} onChange={e => setSelBranch(e.target.value)} disabled={!selUni} style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1", backgroundColor: "#fff" }}>
                   <option value="">Select Branch</option>
-                  {branches.map(b => <option key={b.branch_id} value={b.branch_id}>{b.name}</option>)}
+                  {branches.map(b => <option key={b.branch_id} value={b.branch_id}>{b.branch_name}</option>)}
                 </select>
               </div>
               <div style={{ flex: 1, minWidth: "140px" }}>
@@ -438,7 +438,7 @@ export default function PDFQuestionExtractorGui({
               <div style={{ flex: 1, minWidth: "140px" }}>
                 <select value={manualSubjectId} onChange={e => setManualSubjectId(e.target.value)} disabled={!selSem} style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1", backgroundColor: "#fff" }}>
                   <option value="">Select Subject</option>
-                  {subjects.map(s => <option key={s.subject_id} value={s.subject_id}>{s.name} ({s.code})</option>)}
+                  {subjects.map(s => <option key={s.subject_id} value={s.subject_id}>{s.subject_name} ({s.subject_code})</option>)}
                 </select>
               </div>
             </div>
