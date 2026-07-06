@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "./styles.css";
 
 type ExtractedQuestion = {
@@ -44,6 +44,7 @@ export default function PDFQuestionExtractorGui({
   apiBaseUrl = DEFAULT_API_BASE_URL,
   selectedSubject,
 }: PDFQuestionExtractorGuiProps) {
+  const cleanApiBaseUrl = apiBaseUrl.trim().replace(/\/+$/, "");
   const [file, setFile] = useState<File | null>(null);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,12 +54,61 @@ export default function PDFQuestionExtractorGui({
   const [answers, setAnswers] = useState<Record<string, AnswerData>>({});
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   const [manualSubjectId, setManualSubjectId] = useState("");
+
+  // Academic Dropdown States
+  const [universities, setUniversities] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [semesters, setSemesters] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  
+  const [selUni, setSelUni] = useState("");
+  const [selBranch, setSelBranch] = useState("");
+  const [selSem, setSelSem] = useState("");
+
+  useEffect(() => {
+    fetch(`${cleanApiBaseUrl}/academic/universities`)
+      .then(res => res.json())
+      .then(data => { if(data.success) setUniversities(data.universities); })
+      .catch(console.error);
+  }, [cleanApiBaseUrl]);
+
+  useEffect(() => {
+    setSelBranch(""); setSelSem(""); setManualSubjectId("");
+    setBranches([]); setSemesters([]); setSubjects([]);
+    if (selUni) {
+      fetch(`${cleanApiBaseUrl}/academic/branches?university_id=${selUni}`)
+        .then(res => res.json())
+        .then(data => { if(data.success) setBranches(data.branches); })
+        .catch(console.error);
+    }
+  }, [selUni, cleanApiBaseUrl]);
+
+  useEffect(() => {
+    setSelSem(""); setManualSubjectId("");
+    setSemesters([]); setSubjects([]);
+    if (selBranch) {
+      fetch(`${cleanApiBaseUrl}/academic/semesters?branch_id=${selBranch}`)
+        .then(res => res.json())
+        .then(data => { if(data.success) setSemesters(data.semesters); })
+        .catch(console.error);
+    }
+  }, [selBranch, cleanApiBaseUrl]);
+
+  useEffect(() => {
+    setManualSubjectId("");
+    setSubjects([]);
+    if (selSem) {
+      fetch(`${cleanApiBaseUrl}/academic/subjects?semester_id=${selSem}`)
+        .then(res => res.json())
+        .then(data => { if(data.success) setSubjects(data.subjects); })
+        .catch(console.error);
+    }
+  }, [selSem, cleanApiBaseUrl]);
   const [paperTitle, setPaperTitle] = useState("");
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<ExtractedQuestion>>({});
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cleanApiBaseUrl = apiBaseUrl.trim().replace(/\/+$/, "");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -364,21 +414,40 @@ export default function PDFQuestionExtractorGui({
         <h1 style={{ margin: "0 0 8px 0", fontSize: "24px", color: "#111" }}>PDF Question Extractor</h1>
         <p style={{ margin: 0, color: "#666" }}>Upload a question paper PDF to extract text and diagrams.</p>
         {!selectedSubject && (
-          <div style={{ marginTop: "12px", padding: "16px", backgroundColor: "#fffbeb", color: "#b45309", borderRadius: "6px", fontSize: "14px", border: "1px solid #fef3c7" }}>
-            <strong style={{ display: "block", marginBottom: "8px" }}>Note: Select a subject from the "Academic Import" tab OR enter a Subject ID below to enable Answer Generation.</strong>
-            <input 
-              type="text" 
-              placeholder="Paste Subject ID (UUID) here..." 
-              value={manualSubjectId}
-              onChange={(e) => setManualSubjectId(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: "4px", border: "1px solid #fcd34d", backgroundColor: "#fff", marginBottom: "8px" }}
-            />
+          <div style={{ marginTop: "12px", padding: "16px", backgroundColor: "#f8fafc", color: "#334155", borderRadius: "6px", fontSize: "14px", border: "1px solid #cbd5e1" }}>
+            <strong style={{ display: "block", marginBottom: "8px" }}>Academic Subject Selection</strong>
+            <div style={{ display: "flex", gap: "10px", marginBottom: "12px", flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: "140px" }}>
+                <select value={selUni} onChange={e => setSelUni(e.target.value)} style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1", backgroundColor: "#fff" }}>
+                  <option value="">Select University</option>
+                  {universities.map(u => <option key={u.university_id} value={u.university_id}>{u.name}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1, minWidth: "140px" }}>
+                <select value={selBranch} onChange={e => setSelBranch(e.target.value)} disabled={!selUni} style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1", backgroundColor: "#fff" }}>
+                  <option value="">Select Branch</option>
+                  {branches.map(b => <option key={b.branch_id} value={b.branch_id}>{b.name}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1, minWidth: "140px" }}>
+                <select value={selSem} onChange={e => setSelSem(e.target.value)} disabled={!selBranch} style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1", backgroundColor: "#fff" }}>
+                  <option value="">Select Semester</option>
+                  {semesters.map(s => <option key={s.semester_id} value={s.semester_id}>Sem {s.semester_number}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1, minWidth: "140px" }}>
+                <select value={manualSubjectId} onChange={e => setManualSubjectId(e.target.value)} disabled={!selSem} style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e1", backgroundColor: "#fff" }}>
+                  <option value="">Select Subject</option>
+                  {subjects.map(s => <option key={s.subject_id} value={s.subject_id}>{s.name} ({s.code})</option>)}
+                </select>
+              </div>
+            </div>
             <input 
               type="text" 
               placeholder="Paper Title (e.g. Midterm 2024)" 
               value={paperTitle}
               onChange={(e) => setPaperTitle(e.target.value)}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: "4px", border: "1px solid #fcd34d", backgroundColor: "#fff" }}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: "4px", border: "1px solid #cbd5e1", backgroundColor: "#fff" }}
             />
           </div>
         )}
