@@ -442,10 +442,10 @@ export default function PDFQuestionExtractorGui({
         )}
       </header>
 
-      <div style={{ display: "flex", gap: "24px", flexDirection: pdfPreviewUrl ? "row" : "column", alignItems: "flex-start" }}>
+      <div className={`pdf-extractor-layout ${pdfPreviewUrl ? 'has-pdf' : ''}`}>
         
         {/* LEFT COLUMN: Extraction UI */}
-        <div style={{ flex: "1", minWidth: "50%", width: pdfPreviewUrl ? "50%" : "100%" }}>
+        <div className="pdf-extractor-left">
           <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "24px" }}>
             <input 
               type="file" 
@@ -714,7 +714,7 @@ export default function PDFQuestionExtractorGui({
 
       {/* RIGHT COLUMN: PDF Preview */}
       {pdfPreviewUrl && (
-        <div style={{ flex: "1", height: "calc(100vh - 100px)", position: "sticky", top: "24px", minWidth: "40%", width: "50%", border: "1px solid #cbd5e1", borderRadius: "8px", overflow: "hidden", backgroundColor: "#f8fafc" }}>
+        <div className="pdf-extractor-right">
           <iframe 
             src={pdfPreviewUrl} 
             width="100%" 
