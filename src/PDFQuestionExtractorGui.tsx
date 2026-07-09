@@ -56,6 +56,7 @@ export default function PDFQuestionExtractorGui({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeUploadIndex, setActiveUploadIndex] = useState<number | null>(null);
   const [imageUploading, setImageUploading] = useState<string | null>(null);
+  const [isDeletingPaper, setIsDeletingPaper] = useState(false);
   const [manualSubjectId, setManualSubjectId] = useState("");
 
   // Academic Dropdown States
@@ -401,6 +402,25 @@ export default function PDFQuestionExtractorGui({
     }
   };
 
+  const handleDeletePaper = async () => {
+    if (!paperId) return;
+    if (!window.confirm("Are you sure you want to completely delete this uploaded paper and all its questions?")) return;
+    setIsDeletingPaper(true);
+    try {
+      const res = await fetch(`${cleanApiBaseUrl}/question-paper/${paperId}`, { method: "DELETE" });
+      if (res.ok) {
+        alert("Paper and questions deleted successfully!");
+        setPaperId(null);
+      } else {
+        alert("Failed to delete paper.");
+      }
+    } catch (e) {
+      alert("Error deleting paper.");
+    } finally {
+      setIsDeletingPaper(false);
+    }
+  };
+
   const handleDeleteImage = async (qIndex: number, imgUrl: string, imgIdx: number) => {
     if (!window.confirm("Are you sure you want to delete this image?")) return;
     
@@ -593,7 +613,34 @@ export default function PDFQuestionExtractorGui({
             </div>
           </div>
           
-          {!isSavingBatch && (
+          {paperId && !isSavingBatch && (
+            <div style={{ padding: "16px", backgroundColor: "#fef2f2", borderRadius: "6px", marginBottom: "24px", border: "1px solid #fca5a5", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ margin: "0 0 4px 0", color: "#991b1b" }}>Paper Uploaded Successfully!</h3>
+                <p style={{ margin: 0, color: "#b91c1c", fontSize: "14px" }}>The question paper and all questions are saved in the database.</p>
+              </div>
+              <button 
+                onClick={handleDeletePaper}
+                disabled={isDeletingPaper}
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "#dc2626",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: isDeletingPaper ? "not-allowed" : "pointer",
+                  fontWeight: 600,
+                  fontSize: "14px",
+                  boxShadow: "0 2px 4px rgba(220, 38, 38, 0.3)",
+                  transition: "all 0.2s"
+                }}
+              >
+                {isDeletingPaper ? "Deleting..." : "Undo Upload (Delete Paper)"}
+              </button>
+            </div>
+          )}
+
+          {!paperId && !isSavingBatch && (
             <div style={{ padding: "16px", backgroundColor: "#ecfdf5", borderRadius: "6px", marginBottom: "24px", border: "1px solid #10b981", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <h3 style={{ margin: "0 0 4px 0", color: "#065f46" }}>Extraction Complete!</h3>
