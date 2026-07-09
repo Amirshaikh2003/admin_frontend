@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
-const cleanApiBaseUrl = import.meta.env.VITE_API_URL
-  ? import.meta.env.VITE_API_URL.replace(/\/+$/, "")
+const cleanApiBaseUrl = (import.meta.env as any).VITE_API_URL
+  ? (import.meta.env as any).VITE_API_URL.replace(/\/+$/, "")
   : "http://127.0.0.1:8000/api";
 
 interface LoginProps {
