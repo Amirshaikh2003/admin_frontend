@@ -67,8 +67,23 @@ export default function PDFQuestionExtractorGui({
   const [selBranch, setSelBranch] = useState("");
   const [selSem, setSelSem] = useState("");
 
+  const authFetch = async (url: string, options: RequestInit = {}) => {
+    const token = localStorage.getItem("admin_auth_token");
+    const headers = new Headers(options.headers || {});
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401) {
+      localStorage.removeItem("admin_auth_token");
+      localStorage.removeItem("admin_name");
+      window.location.reload();
+    }
+    return res;
+  };
+
   useEffect(() => {
-    fetch(`${cleanApiBaseUrl}/academic/universities`)
+    authFetch(`${cleanApiBaseUrl}/academic/universities`)
       .then(res => res.json())
       .then(data => { if(data.success) setUniversities(data.universities); })
       .catch(console.error);
@@ -78,7 +93,7 @@ export default function PDFQuestionExtractorGui({
     setSelBranch(""); setSelSem(""); setManualSubjectId("");
     setBranches([]); setSemesters([]); setSubjects([]);
     if (selUni) {
-      fetch(`${cleanApiBaseUrl}/academic/branches?university_id=${selUni}`)
+      authFetch(`${cleanApiBaseUrl}/academic/branches?university_id=${selUni}`)
         .then(res => res.json())
         .then(data => { if(data.success) setBranches(data.branches); })
         .catch(console.error);
@@ -89,7 +104,7 @@ export default function PDFQuestionExtractorGui({
     setSelSem(""); setManualSubjectId("");
     setSemesters([]); setSubjects([]);
     if (selBranch) {
-      fetch(`${cleanApiBaseUrl}/academic/semesters?branch_id=${selBranch}`)
+      authFetch(`${cleanApiBaseUrl}/academic/semesters?branch_id=${selBranch}`)
         .then(res => res.json())
         .then(data => { if(data.success) setSemesters(data.semesters); })
         .catch(console.error);
@@ -100,7 +115,7 @@ export default function PDFQuestionExtractorGui({
     setManualSubjectId("");
     setSubjects([]);
     if (selSem && selBranch) {
-      fetch(`${cleanApiBaseUrl}/academic/subjects?branch_id=${selBranch}&semester_id=${selSem}`)
+      authFetch(`${cleanApiBaseUrl}/academic/subjects?branch_id=${selBranch}&semester_id=${selSem}`)
         .then(res => res.json())
         .then(data => { if(data.success) setSubjects(data.subjects); })
         .catch(console.error);
@@ -135,7 +150,7 @@ export default function PDFQuestionExtractorGui({
     formData.append("file", file);
 
     try {
-      const response = await fetch(`${cleanApiBaseUrl}/extract-questions`, {
+      const response = await authFetch(`${cleanApiBaseUrl}/extract-questions`, {
         method: "POST",
         body: formData,
       });
@@ -213,7 +228,7 @@ export default function PDFQuestionExtractorGui({
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const uploadRes = await fetch(`${cleanApiBaseUrl}/upload-paper-pdf`, {
+      const uploadRes = await authFetch(`${cleanApiBaseUrl}/upload-paper-pdf`, {
         method: "POST",
         body: formData,
       });
@@ -276,7 +291,7 @@ export default function PDFQuestionExtractorGui({
         questions: batchQuestions
       };
       
-      const response = await fetch(`${cleanApiBaseUrl}/save-entire-paper`, {
+      const response = await authFetch(`${cleanApiBaseUrl}/save-entire-paper`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -306,7 +321,7 @@ export default function PDFQuestionExtractorGui({
     if (!window.confirm("Are you sure you want to completely delete this uploaded paper and all its questions?")) return;
     setIsDeletingPaper(true);
     try {
-      const res = await fetch(`${cleanApiBaseUrl}/question-paper/${paperId}`, { method: "DELETE" });
+      const res = await authFetch(`${cleanApiBaseUrl}/question-paper/${paperId}`, { method: "DELETE" });
       if (res.ok) {
         alert("Paper and questions deleted successfully!");
         setPaperId(null);
@@ -324,7 +339,7 @@ export default function PDFQuestionExtractorGui({
     if (!window.confirm("Are you sure you want to delete this image?")) return;
     
     try {
-      const res = await fetch(`${cleanApiBaseUrl}/delete-image`, {
+      const res = await authFetch(`${cleanApiBaseUrl}/delete-image`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image_url: imgUrl })
@@ -377,7 +392,7 @@ export default function PDFQuestionExtractorGui({
     formData.append("file", file);
     
     try {
-      const res = await fetch(`${cleanApiBaseUrl}/upload-image`, {
+      const res = await authFetch(`${cleanApiBaseUrl}/upload-image`, {
         method: "POST",
         body: formData
       });
