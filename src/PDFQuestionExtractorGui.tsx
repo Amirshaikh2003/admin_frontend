@@ -53,7 +53,7 @@ export default function PDFQuestionExtractorGui({
   const [paperId, setPaperId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, AnswerData>>({});
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [activeUploadIndex, setActiveUploadIndex] = useState<number | null>(null);
   const [imageUploading, setImageUploading] = useState<string | null>(null);
   const [isDeletingPaper, setIsDeletingPaper] = useState(false);
@@ -450,14 +450,14 @@ export default function PDFQuestionExtractorGui({
 
   const triggerImageUpload = (qIndex: number) => {
     setActiveUploadIndex(qIndex);
-    if (fileInputRef.current) fileInputRef.current.click();
+    if (imageInputRef.current) imageInputRef.current.click();
   };
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (activeUploadIndex === null || !e.target.files || !e.target.files.length) return;
     const file = e.target.files[0];
     await uploadImageFile(file, activeUploadIndex);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (imageInputRef.current) imageInputRef.current.value = "";
   };
 
   const handleImagePaste = async (e: React.ClipboardEvent, qIndex: number) => {
@@ -597,7 +597,7 @@ export default function PDFQuestionExtractorGui({
           {/* Hidden file input for image upload */}
           <input 
             type="file" 
-            ref={fileInputRef} 
+            ref={imageInputRef} 
             style={{ display: "none" }} 
             accept="image/*" 
             onChange={handleImageSelect} 
