@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 
-const cleanApiBaseUrl = (import.meta.env as any).VITE_API_URL
-  ? (import.meta.env as any).VITE_API_URL.replace(/\/+$/, "")
-  : "http://127.0.0.1:8000/api";
+const cleanApiBaseUrl = ((import.meta.env as any).VITE_API_BASE_URL || "/api").replace(/\/+$/, "");
 
 interface LoginProps {
   onLoginSuccess: (adminName: string) => void;
