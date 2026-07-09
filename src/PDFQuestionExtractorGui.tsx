@@ -53,6 +53,9 @@ export default function PDFQuestionExtractorGui({
   const [paperId, setPaperId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, AnswerData>>({});
   const [isGeneratingAll, setIsGeneratingAll] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeUploadIndex, setActiveUploadIndex] = useState<number | null>(null);
+  const [imageUploading, setImageUploading] = useState<string | null>(null);
   const [manualSubjectId, setManualSubjectId] = useState("");
 
   // Academic Dropdown States
@@ -398,6 +401,87 @@ export default function PDFQuestionExtractorGui({
     }
   };
 
+  const handleDeleteImage = async (qIndex: number, imgUrl: string, imgIdx: number) => {
+    if (!window.confirm("Are you sure you want to delete this image?")) return;
+    
+    try {
+      const res = await fetch(`${cleanApiBaseUrl}/delete-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image_url: imgUrl })
+      });
+      if (res.ok) {
+        setResult(prev => {
+          if (!prev) return prev;
+          const newQuestions = [...prev.questions];
+          const updatedUrls = [...(newQuestions[qIndex].image_urls || [])];
+          updatedUrls.splice(imgIdx, 1);
+          newQuestions[qIndex].image_urls = updatedUrls;
+          return { ...prev, questions: newQuestions };
+        });
+      } else {
+        alert("Failed to delete image.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error deleting image.");
+    }
+  };
+
+  const triggerImageUpload = (qIndex: number) => {
+    setActiveUploadIndex(qIndex);
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (activeUploadIndex === null || !e.target.files || !e.target.files.length) return;
+    const file = e.target.files[0];
+    await uploadImageFile(file, activeUploadIndex);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleImagePaste = async (e: React.ClipboardEvent, qIndex: number) => {
+    if (editingKey !== null) return;
+    if (!e.clipboardData.files.length) return;
+    const file = e.clipboardData.files[0];
+    if (!file.type.startsWith("image/")) return;
+    
+    e.preventDefault();
+    await uploadImageFile(file, qIndex);
+  };
+
+  const uploadImageFile = async (file: File, qIndex: number) => {
+    if (!result || !result.questions[qIndex]) return;
+    setImageUploading(result.questions[qIndex].question_key);
+    
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    try {
+      const res = await fetch(`${cleanApiBaseUrl}/upload-image`, {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        setResult(prev => {
+          if (!prev) return prev;
+          const newQuestions = [...prev.questions];
+          newQuestions[qIndex].image_urls = [...(newQuestions[qIndex].image_urls || []), data.url];
+          return { ...prev, questions: newQuestions };
+        });
+      } else {
+        alert("Failed to upload image.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error uploading image.");
+    } finally {
+      setImageUploading(null);
+      setActiveUploadIndex(null);
+    }
+  };
+
   // Check if all questions are successfully generated
   const allQuestionsSuccess = result?.questions.every(q => answers[`${q.question_key}`]?.status === "success") ?? false;
 
@@ -490,6 +574,14 @@ export default function PDFQuestionExtractorGui({
 
       {result && (
         <div>
+          {/* Hidden file input for image upload */}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            style={{ display: "none" }} 
+            accept="image/*" 
+            onChange={handleImageSelect} 
+          />
           <div style={{ padding: "16px", backgroundColor: "#f8fafc", borderRadius: "6px", marginBottom: "24px", border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <h3 style={{ margin: "0 0 12px 0" }}>Extraction Summary</h3>
@@ -545,8 +637,11 @@ export default function PDFQuestionExtractorGui({
                   </div>
                 )}
                 
-                <div style={{ padding: "20px", border: "1px solid #e2e8f0", borderRadius: "8px", backgroundColor: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-                  
+                <div 
+                  tabIndex={0}
+                  onPaste={(e) => handleImagePaste(e, idx)}
+                  style={{ padding: "20px", border: "1px solid #e2e8f0", borderRadius: "8px", backgroundColor: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", outline: "none" }}
+                >
                   {editingKey === q.question_key ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "16px" }}>
                       <div style={{ display: "flex", gap: "12px" }}>
@@ -635,19 +730,39 @@ export default function PDFQuestionExtractorGui({
                   {q.image_urls && q.image_urls.length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginTop: "16px", borderTop: "1px solid #f1f5f9", paddingTop: "16px" }}>
                       {q.image_urls.map((url, imgIdx) => (
-                        <div key={imgIdx} style={{ border: "1px solid #e2e8f0", borderRadius: "4px", padding: "4px", backgroundColor: "#f8fafc" }}>
+                        <div key={imgIdx} style={{ position: "relative", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "4px", backgroundColor: "#f8fafc", display: "inline-block" }}>
                           <img 
                             src={url} 
                             alt={`Diagram for Q${q.question_no}${q.sub_question}`}
-                            style={{ maxHeight: "200px", maxWidth: "100%", objectFit: "contain" }}
+                            style={{ maxHeight: "200px", maxWidth: "100%", objectFit: "contain", display: "block" }}
                           />
+                          <button
+                            onClick={() => handleDeleteImage(idx, url, imgIdx)}
+                            style={{
+                              position: "absolute",
+                              top: "8px",
+                              right: "8px",
+                              background: "rgba(220, 38, 38, 0.9)",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              padding: "4px 8px",
+                              cursor: "pointer",
+                              fontSize: "12px",
+                              fontWeight: "bold",
+                              boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+                            }}
+                            title="Delete Image"
+                          >
+                            X
+                          </button>
                         </div>
                       ))}
                     </div>
                   )}
 
                   {/* Processing Block */}
-                  <div style={{ marginTop: "24px", borderTop: "1px dashed #cbd5e1", paddingTop: "16px" }}>
+                  <div style={{ marginTop: "24px", borderTop: "1px dashed #cbd5e1", paddingTop: "16px", display: "flex", gap: "12px", alignItems: "center" }}>
                     {!answers[q.question_key] && (
                       <button 
                         onClick={() => handleGenerateAnswer(q)}
@@ -666,7 +781,27 @@ export default function PDFQuestionExtractorGui({
                       </button>
                     )}
 
-                    {answers[q.question_key]?.status === "loading" && (
+                    <button
+                      onClick={() => triggerImageUpload(idx)}
+                      disabled={imageUploading === q.question_key}
+                      style={{
+                        padding: "8px 16px",
+                        backgroundColor: "#fff",
+                        color: "#0284c7",
+                        border: "1px solid #0284c7",
+                        borderRadius: "6px",
+                        cursor: imageUploading === q.question_key ? "not-allowed" : "pointer",
+                        fontWeight: 500
+                      }}
+                      title="Or you can click anywhere in this question box and press Ctrl+V to paste a screenshot"
+                    >
+                      {imageUploading === q.question_key ? "Uploading..." : "Add Image"}
+                    </button>
+                    
+                    <span style={{ fontSize: "12px", color: "#94a3b8" }}>(Or click here and Ctrl+V)</span>
+                  </div>
+
+                  {answers[q.question_key]?.status === "loading" && (
                       <div style={{ color: "#0284c7", fontWeight: 500, display: "flex", alignItems: "center", gap: "8px" }}>
                         <span className="spinner"></span> Processing...
                       </div>
