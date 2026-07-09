@@ -730,19 +730,40 @@ export default function PDFQuestionExtractorGui({
                         />
                       </div>
                       
-                      <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-                        <button 
-                          onClick={handleEditCancel}
-                          style={{ padding: "6px 12px", backgroundColor: "#fff", border: "1px solid #cbd5e1", borderRadius: "4px", cursor: "pointer" }}
-                        >
-                          Cancel
-                        </button>
-                        <button 
-                          onClick={() => handleEditSave(q.question_key)}
-                          style={{ padding: "6px 12px", backgroundColor: "#0284c7", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: 500 }}
-                        >
-                          Save
-                        </button>
+                      <div style={{ display: "flex", gap: "12px", justifyContent: "space-between", alignItems: "center" }}>
+                        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                          <button
+                            onClick={() => triggerImageUpload(idx)}
+                            disabled={imageUploading === q.question_key}
+                            style={{
+                              padding: "6px 12px",
+                              backgroundColor: "#f8fafc",
+                              color: "#0284c7",
+                              border: "1px solid #0284c7",
+                              borderRadius: "4px",
+                              cursor: imageUploading === q.question_key ? "not-allowed" : "pointer",
+                              fontWeight: 500
+                            }}
+                            title="Or you can click anywhere in this question box and press Ctrl+V to paste a screenshot"
+                          >
+                            {imageUploading === q.question_key ? "Uploading..." : "Add Image"}
+                          </button>
+                          <span style={{ fontSize: "12px", color: "#94a3b8" }}>(Or click here and Ctrl+V)</span>
+                        </div>
+                        <div style={{ display: "flex", gap: "12px" }}>
+                          <button 
+                            onClick={handleEditCancel}
+                            style={{ padding: "6px 12px", backgroundColor: "#fff", border: "1px solid #cbd5e1", borderRadius: "4px", cursor: "pointer" }}
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            onClick={() => handleEditSave(q.question_key)}
+                            style={{ padding: "6px 12px", backgroundColor: "#0284c7", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: 500 }}
+                          >
+                            Save
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -828,25 +849,6 @@ export default function PDFQuestionExtractorGui({
                           {q.image_urls && q.image_urls.length > 0 ? "Store Question to Database" : "Generate Answer"}
                         </button>
                       )}
-
-                      <button
-                        onClick={() => triggerImageUpload(idx)}
-                        disabled={imageUploading === q.question_key}
-                        style={{
-                          padding: "8px 16px",
-                          backgroundColor: "#fff",
-                          color: "#0284c7",
-                          border: "1px solid #0284c7",
-                          borderRadius: "6px",
-                          cursor: imageUploading === q.question_key ? "not-allowed" : "pointer",
-                          fontWeight: 500
-                        }}
-                        title="Or you can click anywhere in this question box and press Ctrl+V to paste a screenshot"
-                      >
-                        {imageUploading === q.question_key ? "Uploading..." : "Add Image"}
-                      </button>
-                      
-                      <span style={{ fontSize: "12px", color: "#94a3b8" }}>(Or click here and Ctrl+V)</span>
                     </div>
 
                   {answers[q.question_key]?.status === "loading" && (
