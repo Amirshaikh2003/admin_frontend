@@ -809,44 +809,45 @@ export default function PDFQuestionExtractorGui({
                   )}
 
                   {/* Processing Block */}
-                  <div style={{ marginTop: "24px", borderTop: "1px dashed #cbd5e1", paddingTop: "16px", display: "flex", gap: "12px", alignItems: "center" }}>
-                    {!answers[q.question_key] && (
-                      <button 
-                        onClick={() => handleGenerateAnswer(q)}
-                        disabled={isGeneratingAll || (!selectedSubject && !manualSubjectId.trim())}
+                  <div style={{ marginTop: "24px", borderTop: "1px dashed #cbd5e1", paddingTop: "16px" }}>
+                    <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "16px" }}>
+                      {!answers[q.question_key] && (
+                        <button 
+                          onClick={() => handleGenerateAnswer(q)}
+                          disabled={isGeneratingAll || (!selectedSubject && !manualSubjectId.trim())}
+                          style={{
+                            padding: "8px 16px",
+                            backgroundColor: (!isGeneratingAll && (selectedSubject || manualSubjectId.trim())) ? "#f1f5f9" : "#e2e8f0",
+                            color: (!isGeneratingAll && (selectedSubject || manualSubjectId.trim())) ? "#334155" : "#94a3b8",
+                            border: "1px solid #cbd5e1",
+                            borderRadius: "6px",
+                            cursor: (!isGeneratingAll && (selectedSubject || manualSubjectId.trim())) ? "pointer" : "not-allowed",
+                            fontWeight: 500
+                          }}
+                        >
+                          {q.image_urls && q.image_urls.length > 0 ? "Store Question to Database" : "Generate Answer"}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => triggerImageUpload(idx)}
+                        disabled={imageUploading === q.question_key}
                         style={{
                           padding: "8px 16px",
-                          backgroundColor: (!isGeneratingAll && (selectedSubject || manualSubjectId.trim())) ? "#f1f5f9" : "#e2e8f0",
-                          color: (!isGeneratingAll && (selectedSubject || manualSubjectId.trim())) ? "#334155" : "#94a3b8",
-                          border: "1px solid #cbd5e1",
+                          backgroundColor: "#fff",
+                          color: "#0284c7",
+                          border: "1px solid #0284c7",
                           borderRadius: "6px",
-                          cursor: (!isGeneratingAll && (selectedSubject || manualSubjectId.trim())) ? "pointer" : "not-allowed",
+                          cursor: imageUploading === q.question_key ? "not-allowed" : "pointer",
                           fontWeight: 500
                         }}
+                        title="Or you can click anywhere in this question box and press Ctrl+V to paste a screenshot"
                       >
-                        {q.image_urls && q.image_urls.length > 0 ? "Store Question to Database" : "Generate Answer"}
+                        {imageUploading === q.question_key ? "Uploading..." : "Add Image"}
                       </button>
-                    )}
-
-                    <button
-                      onClick={() => triggerImageUpload(idx)}
-                      disabled={imageUploading === q.question_key}
-                      style={{
-                        padding: "8px 16px",
-                        backgroundColor: "#fff",
-                        color: "#0284c7",
-                        border: "1px solid #0284c7",
-                        borderRadius: "6px",
-                        cursor: imageUploading === q.question_key ? "not-allowed" : "pointer",
-                        fontWeight: 500
-                      }}
-                      title="Or you can click anywhere in this question box and press Ctrl+V to paste a screenshot"
-                    >
-                      {imageUploading === q.question_key ? "Uploading..." : "Add Image"}
-                    </button>
-                    
-                    <span style={{ fontSize: "12px", color: "#94a3b8" }}>(Or click here and Ctrl+V)</span>
-                  </div>
+                      
+                      <span style={{ fontSize: "12px", color: "#94a3b8" }}>(Or click here and Ctrl+V)</span>
+                    </div>
 
                   {answers[q.question_key]?.status === "loading" && (
                       <div style={{ color: "#0284c7", fontWeight: 500, display: "flex", alignItems: "center", gap: "8px" }}>
