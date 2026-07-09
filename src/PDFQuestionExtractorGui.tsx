@@ -334,6 +334,11 @@ export default function PDFQuestionExtractorGui({
       return;
     }
     
+    if (!paperTitle.trim()) {
+      alert("Please enter a Paper Title before uploading to the database!");
+      return;
+    }
+    
     if (!result || !result.questions) return;
     
     setIsSavingBatch(true);
