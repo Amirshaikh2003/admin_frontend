@@ -51,8 +51,6 @@ export default function PDFQuestionExtractorGui({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ExtractionResult | null>(null);
   const [paperId, setPaperId] = useState<string | null>(null);
-  const [answers, setAnswers] = useState<Record<string, AnswerData>>({});
-  const [isGeneratingAll, setIsGeneratingAll] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [activeUploadIndex, setActiveUploadIndex] = useState<number | null>(null);
   const [imageUploading, setImageUploading] = useState<string | null>(null);
@@ -123,8 +121,6 @@ export default function PDFQuestionExtractorGui({
       setResult(null);
       setError(null);
       setPaperId(null);
-      setAnswers({});
-      setIsGeneratingAll(false);
     }
   };
 
@@ -134,8 +130,6 @@ export default function PDFQuestionExtractorGui({
     setLoading(true);
     setError(null);
     setPaperId(null);
-    setAnswers({});
-    setIsGeneratingAll(false);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -237,98 +231,6 @@ export default function PDFQuestionExtractorGui({
     return null;
   };
 
-  const processSingleQuestion = async (q: ExtractedQuestion) => {
-    const key = `${q.question_key}`;
-    setAnswers(prev => ({ ...prev, [key]: { status: "loading" } }));
-    
-    const isImageQuestion = q.image_urls && q.image_urls.length > 0;
-
-    let attempt = 0;
-    const maxRetries = 3;
-    
-    while (attempt < maxRetries) {
-      try {
-        const payload: any = {
-          question: q.question,
-          question_number: q.question_no + (q.sub_question || ""),
-          marks: q.marks || 5
-        };
-
-        if (isImageQuestion) {
-          payload.skip_answer = true;
-          payload.image_urls = q.image_urls;
-        }
-
-        const response = await fetch(`${cleanApiBaseUrl}/generate-only`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-        
-        if (!response.ok) {
-           if (response.status === 429) {
-             throw new Error("Rate limit exceeded");
-           }
-           throw new Error("Failed to process question");
-        }
-        
-        const data = await response.json();
-        const successMsg = isImageQuestion 
-          ? "Question processed locally. (AI generation skipped for images)" 
-          : "Answer generated successfully locally.";
-
-        setAnswers(prev => ({ 
-          ...prev, 
-          [key]: { 
-            status: "success", 
-            text: successMsg,
-            fullAnswer: data.answer,
-            analysis: data.analysis
-          } 
-        }));
-        
-        return; // Success, exit loop
-        
-      } catch (err: any) {
-        attempt++;
-        if (attempt >= maxRetries) {
-          setAnswers(prev => ({ 
-            ...prev, 
-            [key]: { status: "error", error: err.message } 
-          }));
-        } else {
-          // Update status to show it's retrying
-          setAnswers(prev => ({ 
-            ...prev, 
-            [key]: { status: "loading", text: `Retrying (${attempt}/${maxRetries})...` } 
-          }));
-          // Wait a bit before retrying, increasing wait time each attempt
-          await new Promise(r => setTimeout(r, attempt * 2000));
-        }
-      }
-    }
-  };
-
-  const handleGenerateAnswer = async (q: ExtractedQuestion) => {
-    await processSingleQuestion(q);
-  };
-
-  const handleGenerateAll = async () => {
-    if (!result || !result.questions) return;
-    
-    setIsGeneratingAll(true);
-    
-    const CONCURRENCY_LIMIT = 1;
-    const questionsToProcess = result.questions.filter(q => answers[`${q.question_key}`]?.status !== "success");
-    
-    for (let i = 0; i < questionsToProcess.length; i += CONCURRENCY_LIMIT) {
-      const chunk = questionsToProcess.slice(i, i + CONCURRENCY_LIMIT);
-      await Promise.all(chunk.map(q => processSingleQuestion(q)));
-    }
-    
-    setIsGeneratingAll(false);
-  };
-
   const [isSavingBatch, setIsSavingBatch] = useState(false);
 
   const handleSaveEntirePaper = async () => {
@@ -351,18 +253,15 @@ export default function PDFQuestionExtractorGui({
       const paperUrl = await uploadPdfToCloudinary();
       
       const batchQuestions = result.questions.map(q => {
-        const key = `${q.question_key}`;
-        const ansData = answers[key];
-        
         return {
           question: q.question,
           question_number: q.question_no + (q.sub_question || ""),
           marks: q.marks || 5,
           difficulty: "Easy",
           image_urls: q.image_urls,
-          answer: ansData?.fullAnswer || null,
-          analysis: ansData?.analysis || null,
-          skip_answer: Boolean(!ansData?.fullAnswer)
+          answer: null,
+          analysis: null,
+          skip_answer: true
         };
       });
       
@@ -502,8 +401,7 @@ export default function PDFQuestionExtractorGui({
     }
   };
 
-  // Check if all questions are successfully generated
-  const allQuestionsSuccess = result?.questions.every(q => answers[`${q.question_key}`]?.status === "success") ?? false;
+
 
 
   return (
@@ -690,78 +588,95 @@ export default function PDFQuestionExtractorGui({
                   style={{ padding: "20px", border: "1px solid #e2e8f0", borderRadius: "8px", backgroundColor: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", outline: "none" }}
                 >
                   {editingKey === q.question_key ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "16px" }}>
-                      <div style={{ display: "flex", gap: "12px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "16px", backgroundColor: "#f8fafc", padding: "20px", borderRadius: "10px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)" }}>
+                      <div style={{ display: "flex", gap: "16px" }}>
                         <div style={{ flex: 1 }}>
-                          <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>Question No</label>
+                          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "6px" }}>Question No</label>
                           <input 
                             type="text" 
                             value={editForm.question_no || ""} 
                             onChange={(e) => setEditForm({...editForm, question_no: e.target.value})}
-                            style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                            style={{ width: "100%", padding: "10px 12px", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "14px", outline: "none", transition: "all 0.2s" }}
+                            onFocus={(e) => { e.target.style.borderColor = "#0284c7"; e.target.style.boxShadow = "0 0 0 3px rgba(2, 132, 199, 0.1)"; }}
+                            onBlur={(e) => { e.target.style.borderColor = "#cbd5e1"; e.target.style.boxShadow = "none"; }}
                           />
                         </div>
                         <div style={{ flex: 1 }}>
-                          <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>Sub-question</label>
+                          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "6px" }}>Sub-question</label>
                           <input 
                             type="text" 
                             value={editForm.sub_question || ""} 
                             onChange={(e) => setEditForm({...editForm, sub_question: e.target.value})}
-                            style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                            style={{ width: "100%", padding: "10px 12px", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "14px", outline: "none", transition: "all 0.2s" }}
+                            onFocus={(e) => { e.target.style.borderColor = "#0284c7"; e.target.style.boxShadow = "0 0 0 3px rgba(2, 132, 199, 0.1)"; }}
+                            onBlur={(e) => { e.target.style.borderColor = "#cbd5e1"; e.target.style.boxShadow = "none"; }}
                           />
                         </div>
                         <div style={{ flex: 1 }}>
-                          <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>Marks</label>
+                          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "6px" }}>Marks</label>
                           <input 
                             type="number" 
                             value={editForm.marks || ""} 
                             onChange={(e) => setEditForm({...editForm, marks: parseInt(e.target.value) || 0})}
-                            style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "4px" }}
+                            style={{ width: "100%", padding: "10px 12px", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "14px", outline: "none", transition: "all 0.2s" }}
+                            onFocus={(e) => { e.target.style.borderColor = "#0284c7"; e.target.style.boxShadow = "0 0 0 3px rgba(2, 132, 199, 0.1)"; }}
+                            onBlur={(e) => { e.target.style.borderColor = "#cbd5e1"; e.target.style.boxShadow = "none"; }}
                           />
                         </div>
                       </div>
                       
                       <div>
-                        <label style={{ display: "block", fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>Question Text</label>
+                        <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#475569", marginBottom: "6px" }}>Question Text</label>
                         <textarea 
                           value={editForm.question || ""} 
                           onChange={(e) => setEditForm({...editForm, question: e.target.value})}
-                          style={{ width: "100%", padding: "8px", border: "1px solid #cbd5e1", borderRadius: "4px", minHeight: "100px", resize: "vertical" }}
+                          style={{ width: "100%", padding: "12px", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "14px", minHeight: "120px", resize: "vertical", outline: "none", transition: "all 0.2s" }}
+                          onFocus={(e) => { e.target.style.borderColor = "#0284c7"; e.target.style.boxShadow = "0 0 0 3px rgba(2, 132, 199, 0.1)"; }}
+                          onBlur={(e) => { e.target.style.borderColor = "#cbd5e1"; e.target.style.boxShadow = "none"; }}
                         />
                       </div>
                       
-                      <div style={{ display: "flex", gap: "12px", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", gap: "12px", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
                         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                           <button
                             onClick={() => triggerImageUpload(idx)}
                             disabled={imageUploading === q.question_key}
                             style={{
-                              padding: "6px 12px",
-                              backgroundColor: "#f8fafc",
+                              padding: "8px 16px",
+                              backgroundColor: "#fff",
                               color: "#0284c7",
                               border: "1px solid #0284c7",
-                              borderRadius: "4px",
+                              borderRadius: "6px",
                               cursor: imageUploading === q.question_key ? "not-allowed" : "pointer",
-                              fontWeight: 500
+                              fontWeight: 600,
+                              fontSize: "13px",
+                              boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                              transition: "all 0.2s"
                             }}
                             title="Or you can click anywhere in this question box and press Ctrl+V to paste a screenshot"
+                            onMouseOver={(e) => { if (imageUploading !== q.question_key) e.currentTarget.style.backgroundColor = "#f0f9ff"; }}
+                            onMouseOut={(e) => { if (imageUploading !== q.question_key) e.currentTarget.style.backgroundColor = "#fff"; }}
                           >
-                            {imageUploading === q.question_key ? "Uploading..." : "Add Image"}
+                            {imageUploading === q.question_key ? "Uploading..." : "+ Add Image"}
                           </button>
-                          <span style={{ fontSize: "12px", color: "#94a3b8" }}>(Or click here and Ctrl+V)</span>
+                          <span style={{ fontSize: "12px", color: "#94a3b8", fontStyle: "italic" }}>(Or press Ctrl+V to paste screenshot)</span>
                         </div>
                         <div style={{ display: "flex", gap: "12px" }}>
                           <button 
                             onClick={handleEditCancel}
-                            style={{ padding: "6px 12px", backgroundColor: "#fff", border: "1px solid #cbd5e1", borderRadius: "4px", cursor: "pointer" }}
+                            style={{ padding: "8px 20px", backgroundColor: "#fff", color: "#64748b", border: "1px solid #cbd5e1", borderRadius: "6px", cursor: "pointer", fontWeight: 600, fontSize: "14px", transition: "all 0.2s" }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#f8fafc"}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#fff"}
                           >
                             Cancel
                           </button>
                           <button 
                             onClick={() => handleEditSave(q.question_key)}
-                            style={{ padding: "6px 12px", backgroundColor: "#0284c7", color: "#fff", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: 500 }}
+                            style={{ padding: "8px 20px", backgroundColor: "#0284c7", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 600, fontSize: "14px", boxShadow: "0 2px 4px rgba(2, 132, 199, 0.2)", transition: "all 0.2s" }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#0369a1"}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#0284c7"}
                           >
-                            Save
+                            Save Changes
                           </button>
                         </div>
                       </div>
@@ -778,14 +693,12 @@ export default function PDFQuestionExtractorGui({
                               {q.marks} Marks
                             </span>
                           )}
-                          {!answers[q.question_key] && (
-                            <button 
-                              onClick={() => handleEditStart(q)}
-                              style={{ border: "none", background: "none", color: "#64748b", cursor: "pointer", fontSize: "14px", textDecoration: "underline" }}
-                            >
-                              Edit
-                            </button>
-                          )}
+                          <button 
+                            onClick={() => handleEditStart(q)}
+                            style={{ border: "none", background: "none", color: "#64748b", cursor: "pointer", fontSize: "14px", textDecoration: "underline" }}
+                          >
+                            Edit
+                          </button>
                         </div>
                       </div>
                       
@@ -798,11 +711,11 @@ export default function PDFQuestionExtractorGui({
                   {q.image_urls && q.image_urls.length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "12px", marginTop: "16px", borderTop: "1px solid #f1f5f9", paddingTop: "16px" }}>
                       {q.image_urls.map((url, imgIdx) => (
-                        <div key={imgIdx} style={{ position: "relative", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "4px", backgroundColor: "#f8fafc", display: "inline-block" }}>
+                        <div key={imgIdx} style={{ position: "relative", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "4px", backgroundColor: "#f8fafc", display: "inline-block", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                           <img 
                             src={url} 
                             alt={`Diagram for Q${q.question_no}${q.sub_question}`}
-                            style={{ maxHeight: "200px", maxWidth: "100%", objectFit: "contain", display: "block" }}
+                            style={{ maxHeight: "200px", maxWidth: "100%", objectFit: "contain", display: "block", borderRadius: "4px" }}
                           />
                           <button
                             onClick={() => handleDeleteImage(idx, url, imgIdx)}
@@ -813,68 +726,28 @@ export default function PDFQuestionExtractorGui({
                               background: "rgba(220, 38, 38, 0.9)",
                               color: "white",
                               border: "none",
-                              borderRadius: "4px",
-                              padding: "4px 8px",
+                              borderRadius: "50%",
+                              width: "24px",
+                              height: "24px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
                               cursor: "pointer",
                               fontSize: "12px",
                               fontWeight: "bold",
-                              boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+                              boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                              transition: "transform 0.2s"
                             }}
+                            onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.1)"}
+                            onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
                             title="Delete Image"
                           >
-                            X
+                            ✕
                           </button>
                         </div>
                       ))}
                     </div>
                   )}
-
-                  {/* Processing Block */}
-                  <div style={{ marginTop: "24px", borderTop: "1px dashed #cbd5e1", paddingTop: "16px" }}>
-                    <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "16px" }}>
-                      {!answers[q.question_key] && (
-                        <button 
-                          onClick={() => handleGenerateAnswer(q)}
-                          disabled={isGeneratingAll || (!selectedSubject && !manualSubjectId.trim())}
-                          style={{
-                            padding: "8px 16px",
-                            backgroundColor: (!isGeneratingAll && (selectedSubject || manualSubjectId.trim())) ? "#f1f5f9" : "#e2e8f0",
-                            color: (!isGeneratingAll && (selectedSubject || manualSubjectId.trim())) ? "#334155" : "#94a3b8",
-                            border: "1px solid #cbd5e1",
-                            borderRadius: "6px",
-                            cursor: (!isGeneratingAll && (selectedSubject || manualSubjectId.trim())) ? "pointer" : "not-allowed",
-                            fontWeight: 500
-                          }}
-                        >
-                          {q.image_urls && q.image_urls.length > 0 ? "Store Question to Database" : "Generate Answer"}
-                        </button>
-                      )}
-                    </div>
-
-                  {answers[q.question_key]?.status === "loading" && (
-                      <div style={{ color: "#0284c7", fontWeight: 500, display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span className="spinner"></span> Processing...
-                      </div>
-                    )}
-
-                    {answers[q.question_key]?.status === "error" && (
-                      <div style={{ color: "#dc2626", fontWeight: 500, backgroundColor: "#fef2f2", padding: "12px", borderRadius: "6px", border: "1px solid #fecaca" }}>
-                        Error: {answers[q.question_key].error}
-                        <button onClick={() => handleGenerateAnswer(q)} style={{ marginLeft: "12px", border: "none", background: "none", color: "#2563eb", cursor: "pointer", textDecoration: "underline" }}>Retry</button>
-                      </div>
-                    )}
-
-                    {answers[q.question_key]?.status === "success" && (
-                      <div style={{ backgroundColor: (q.image_urls && q.image_urls.length > 0) ? "#fffbeb" : "#f0fdf4", padding: "16px", borderRadius: "6px", border: `1px solid ${(q.image_urls && q.image_urls.length > 0) ? "#fde68a" : "#bbf7d0"}` }}>
-                        <h5 style={{ margin: "0 0 8px 0", color: (q.image_urls && q.image_urls.length > 0) ? "#b45309" : "#166534" }}>
-                          {(q.image_urls && q.image_urls.length > 0) ? "Question Stored Successfully" : "Generated Answer Saved"}
-                        </h5>
-                        <p style={{ margin: 0, color: (q.image_urls && q.image_urls.length > 0) ? "#92400e" : "#15803d", whiteSpace: "pre-wrap", lineHeight: "1.6" }}>
-                          {answers[q.question_key].text}
-                        </p>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </React.Fragment>
             ))}
@@ -882,14 +755,14 @@ export default function PDFQuestionExtractorGui({
             <div style={{ display: "flex", justifyContent: "center", marginTop: "16px" }}>
               <button
                 onClick={handleAddQuestion}
-                disabled={editingKey !== null || isGeneratingAll}
+                disabled={editingKey !== null}
                 style={{
                   padding: "10px 20px",
                   backgroundColor: "#fff",
-                  color: (editingKey !== null || isGeneratingAll) ? "#94a3b8" : "#3b82f6",
-                  border: `1px dashed ${(editingKey !== null || isGeneratingAll) ? "#cbd5e1" : "#3b82f6"}`,
+                  color: (editingKey !== null) ? "#94a3b8" : "#3b82f6",
+                  border: `1px dashed ${(editingKey !== null) ? "#cbd5e1" : "#3b82f6"}`,
                   borderRadius: "6px",
-                  cursor: (editingKey !== null || isGeneratingAll) ? "not-allowed" : "pointer",
+                  cursor: (editingKey !== null) ? "not-allowed" : "pointer",
                   fontWeight: 500,
                   transition: "all 0.2s"
                 }}
