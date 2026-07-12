@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import PDFQuestionExtractorGui from "./PDFQuestionExtractorGui";
 import Login from "./Login";
+import ManageQuestionPapers from "./ManageQuestionPapers";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminName, setAdminName] = useState("");
+  const [activeTab, setActiveTab] = useState("extractor");
 
   useEffect(() => {
     const token = localStorage.getItem("admin_auth_token");
@@ -39,8 +41,37 @@ export default function App() {
             <p>Welcome, {adminName} | Manage academic data, extract questions, and save answers</p>
           </div>
         </div>
-        <button 
-          onClick={handleLogout}
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            onClick={() => setActiveTab("extractor")}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: activeTab === "extractor" ? '#3b82f6' : '#374151',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            Extract Questions
+          </button>
+          <button 
+            onClick={() => setActiveTab("manage")}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: activeTab === "manage" ? '#3b82f6' : '#374151',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            Manage Papers
+          </button>
+          <button 
+            onClick={handleLogout}
           style={{
             marginRight: '20px',
             padding: '8px 16px',
@@ -56,7 +87,11 @@ export default function App() {
         </button>
       </header>
 
-      <PDFQuestionExtractorGui selectedSubject={null} />
+      {activeTab === "extractor" ? (
+        <PDFQuestionExtractorGui selectedSubject={null} />
+      ) : (
+        <ManageQuestionPapers />
+      )}
     </div>
   );
 }
