@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./styles.css";
+import MathText from "./MathText";
 
 type ExtractedQuestion = {
   page: number;
@@ -717,9 +718,9 @@ export default function PDFQuestionExtractorGui({
                         </div>
                       </div>
                       
-                      <p style={{ margin: "0 0 16px 0", color: "#334155", lineHeight: "1.6", whiteSpace: "pre-wrap" }}>
-                        {q.question}
-                      </p>
+                      <div style={{ margin: "0 0 16px 0", color: "#334155", lineHeight: "1.6", whiteSpace: "pre-wrap" }}>
+                        <MathText text={q.question} />
+                      </div>
                     </>
                   )}
 
