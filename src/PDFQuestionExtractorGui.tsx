@@ -350,9 +350,13 @@ export default function PDFQuestionExtractorGui({
           if (!prev) return prev;
           const newQuestions = [...prev.questions];
           const updatedUrls = [...(newQuestions[qIndex].image_urls || [])];
-          updatedUrls.splice(imgIdx, 1);
-          newQuestions[qIndex].image_urls = updatedUrls;
-          return { ...prev, questions: newQuestions };
+          updatedUrls.splice(imgIndex, 1);
+          newQuestions[qIndex] = { ...newQuestions[qIndex], image_urls: updatedUrls };
+          
+          const updatedResult = { ...prev, questions: newQuestions };
+          autoSavePaper(updatedResult);
+          
+          return updatedResult;
         });
       } else {
         alert("Failed to delete image.");
@@ -366,6 +370,27 @@ export default function PDFQuestionExtractorGui({
   const triggerImageUpload = (qIndex: number) => {
     setActiveUploadIndex(qIndex);
     if (imageInputRef.current) imageInputRef.current.click();
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, qIndex: number) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+    await uploadImageFile(file, qIndex);
+    if (e.target) e.target.value = "";
+  };
+
+  const autoSavePaper = async (paperData: typeof result) => {
+    if (!paperData) return;
+    try {
+      await authFetch(`${cleanApiBaseUrl}/save-entire-paper`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(paperData)
+      });
+      console.log("Auto-saved paper after image modification");
+    } catch (err) {
+      console.error("Auto-save failed:", err);
+    }
   };
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -410,8 +435,15 @@ export default function PDFQuestionExtractorGui({
         setResult(prev => {
           if (!prev) return prev;
           const newQuestions = [...prev.questions];
-          newQuestions[qIndex].image_urls = [...(newQuestions[qIndex].image_urls || []), data.url];
-          return { ...prev, questions: newQuestions };
+          newQuestions[qIndex] = {
+            ...newQuestions[qIndex],
+            image_urls: [...(newQuestions[qIndex].image_urls || []), data.url]
+          };
+          
+          const updatedResult = { ...prev, questions: newQuestions };
+          autoSavePaper(updatedResult);
+          
+          return updatedResult;
         });
       } else {
         alert("Failed to upload image.");
