@@ -376,13 +376,21 @@ export default function PDFQuestionExtractorGui({
   };
 
   const handleImagePaste = async (e: React.ClipboardEvent, qIndex: number) => {
-    if (editingKey !== null) return;
-    if (!e.clipboardData.files.length) return;
-    const file = e.clipboardData.files[0];
-    if (!file.type.startsWith("image/")) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    let imageFile = null;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        imageFile = items[i].getAsFile();
+        break;
+      }
+    }
+
+    if (!imageFile) return; // If pasting text, let it happen normally
     
     e.preventDefault();
-    await uploadImageFile(file, qIndex);
+    await uploadImageFile(imageFile, qIndex);
   };
 
   const uploadImageFile = async (file: File, qIndex: number) => {
