@@ -350,7 +350,7 @@ export default function PDFQuestionExtractorGui({
           if (!prev) return prev;
           const newQuestions = [...prev.questions];
           const updatedUrls = [...(newQuestions[qIndex].image_urls || [])];
-          updatedUrls.splice(imgIndex, 1);
+          updatedUrls.splice(imgIdx, 1);
           newQuestions[qIndex] = { ...newQuestions[qIndex], image_urls: updatedUrls };
           
           const updatedResult = { ...prev, questions: newQuestions };
