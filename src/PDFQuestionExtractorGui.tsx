@@ -181,6 +181,24 @@ export default function PDFQuestionExtractorGui({
     }
   };
 
+  const handleDeleteQuestion = (questionKey: string) => {
+    if (!window.confirm("Are you sure you want to delete this question?")) return;
+    setResult(prev => {
+      if (!prev) return prev;
+      const newQuestions = prev.questions.filter(q => q.question_key !== questionKey);
+      const updatedResult = { ...prev, questions: newQuestions };
+      
+      // Auto-save the paper silently after deleting a question
+      authFetch(`${cleanApiBaseUrl}/save-entire-paper`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedResult)
+      }).catch(err => console.error("Auto-save failed after deletion:", err));
+      
+      return updatedResult;
+    });
+  };
+
   const handleEditStart = (q: ExtractedQuestion) => {
     setEditingKey(q.question_key);
     setEditForm({ ...q });
@@ -754,6 +772,12 @@ export default function PDFQuestionExtractorGui({
                             style={{ border: "none", background: "none", color: "#64748b", cursor: "pointer", fontSize: "14px", textDecoration: "underline" }}
                           >
                             Edit
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteQuestion(q.question_key)}
+                            style={{ border: "none", background: "none", color: "#ef4444", cursor: "pointer", fontSize: "14px", textDecoration: "underline" }}
+                          >
+                            Delete
                           </button>
                         </div>
                       </div>
