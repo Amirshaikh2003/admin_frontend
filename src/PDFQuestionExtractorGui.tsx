@@ -318,8 +318,8 @@ export default function PDFQuestionExtractorGui({
       const payload = {
         subject_id: effectiveSubjectId,
         paper_title: paperTitle.trim() || "Untitled Paper",
-        year: new Date().getFullYear(),
-        exam_type: "Extraction",
+        year: result.paper.year || new Date().getFullYear(),
+        exam_type: result.paper.exam_type || "Extraction",
         duration: 180,
         total_marks: 80,
         paper_url: paperUrl,
