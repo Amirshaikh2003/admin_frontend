@@ -211,11 +211,27 @@ export default function PDFQuestionExtractorGui({
 
   const handleEditSave = (originalKey: string) => {
     if (!result || !result.questions) return;
-    setResult({
-      ...result,
-      questions: result.questions.map(q => 
-        q.question_key === originalKey ? { ...q, ...editForm } as ExtractedQuestion : q
-      )
+    setResult(prev => {
+      if (!prev) return prev;
+      const newQuestions = prev.questions.map(q => {
+        if (q.question_key === originalKey) {
+          // Destructure to remove image_urls from editForm so it doesn't overwrite 
+          // any images that were uploaded while in edit mode.
+          const { image_urls, ...restEditForm } = editForm as any;
+          return { ...q, ...restEditForm } as ExtractedQuestion;
+        }
+        return q;
+      });
+      const updatedResult = { ...prev, questions: newQuestions };
+      
+      // Auto-save the paper silently after editing
+      authFetch(`${cleanApiBaseUrl}/save-entire-paper`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedResult)
+      }).catch(err => console.error("Auto-save failed after edit:", err));
+      
+      return updatedResult;
     });
     setEditingKey(null);
     setEditForm({});
